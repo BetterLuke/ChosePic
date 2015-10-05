@@ -9,6 +9,7 @@ import android.util.LruCache;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
+import java.lang.reflect.Field;
 import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -81,7 +82,7 @@ public class ImageLoader {
      * @param type 加载策略
      */
     private void init(int threadCount, Type type) {
-        //后台轮询线程
+        //初始化后台轮询线程
         mPoolThread = new Thread(){
             @Override
             public void run() {
@@ -118,9 +119,9 @@ public class ImageLoader {
             }
         };
 
-        //创建线程池
+        //初始化线程池
         mThreadPool = Executors.newFixedThreadPool(threadCount);
-        //创建任务队列
+        //初始化任务队列
         mTaskQueue = new LinkedList<Runnable>();
 
         mType = type;
@@ -287,7 +288,8 @@ public class ImageLoader {
             width = lp.width;//获取imageView在layout中声明的宽度
         }
         if (width <= 0){
-            width = imageView.getMaxWidth();//检查最大值，以应对wrap-content,fill-parent情况
+            //width = imageView.getMaxWidth();//检查最大值，以应对wrap-content,fill-parent情况
+            width = getImageViewFieldValue(imageView,"maxWidth");//检查最大值
         }
         if (width <=0){
             width = displayMetrics.widthPixels;//设置宽度为屏幕的宽度
@@ -298,7 +300,8 @@ public class ImageLoader {
             height = lp.height;//获取imageView在layout中声明的高度
         }
         if (height <= 0){
-            height = imageView.getMaxHeight();//检查最大值，以应对wrap-content,fill-parent情况
+            //height = imageView.getMaxHeight();//检查最大值，以应对wrap-content,fill-parent情况
+            height = getImageViewFieldValue(imageView,"maxHeight");//检查最大值
         }
         if (height <=0){
             height = displayMetrics.heightPixels;//设置高度为屏幕的高度
@@ -308,6 +311,31 @@ public class ImageLoader {
         imageSize.height = height;
 
         return  imageSize;
+    }
+
+    /**
+     * 头或反射获取imageview的某个属性值
+     * @param object
+     * @param fieldName
+     * @return
+     */
+    private static int getImageViewFieldValue(Object object,String fieldName){
+        int value = 0;
+
+        try {
+            Field field = ImageView.class.getDeclaredField(fieldName);
+            field.setAccessible(true);
+
+            int fieldValue = field.getInt(object);
+            if (fieldValue > 0 && fieldValue < Integer.MAX_VALUE){
+                value = fieldValue;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
+        return value;
     }
 
     /**
